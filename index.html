@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IIM Journal Research Directory (2026) | ABDC, Scopus, FT50, UTD24</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .badge-star { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <div id="root">
+    <div class="flex items-center justify-center min-h-screen">
+      <div class="text-center">
+        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-600 mb-3"></i>
+        <p class="text-slate-600 font-medium">Loading IIM Journal Directory (TanStack Table)...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TanStack Table + React Standalone Implementation -->
+  <script type="module">
+    import React, { useState, useMemo } from 'https://esm.sh/react@18.2.0';
+    import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
+    import htm from 'https://esm.sh/htm@3.1.1';
+    import {
+      useReactTable,
+      getCoreRowModel,
+      getFilteredRowModel,
+      getSortedRowModel,
+      getPaginationRowModel,
+      flexRender
+    } from 'https://esm.sh/@tanstack/react-table@8.21.3';
+    import { journalsData } from './data/journals.js';
+
+    const html = htm.bind(React.createElement);
+
+    function App() {
+      const [globalFilter, setGlobalFilter] = useState('');
+      const [disciplineFilter, setDisciplineFilter] = useState('ALL');
+      const [tagFilter, setTagFilter] = useState('ALL');
+      const [sorting, setSorting] = useState([]);
+      const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 15 });
+
+      // Pre-filter data based on tag chips if selected
+      const filteredData = useMemo(() => {
+        return journalsData.filter(item => {
+          // Discipline filter
+          if (disciplineFilter !== 'ALL' && item.discipline !== disciplineFilter) {
+            return false;
+          }
+          // Tag filter
+          if (tagFilter === 'IIM' && !item.iim) return false;
+          if (tagFilter === 'FT50' && !item.ft50) return false;
+          if (tagFilter === 'UTD24' && !item.utd24) return false;
+          if (tagFilter === 'ABDC_ASTAR' && item.abdc !== 'A*') return false;
+          if (tagFilter === 'ABDC_A' && item.abdc !== 'A') return false;
+          if (tagFilter === 'SCOPUS_Q1' && item.scopus !== 'Q1') return false;
+          return true;
+        });
+      }, [disciplineFilter, tagFilter]);
+
+      // Define TanStack Table Columns
+      const columns = useMemo(() => [
+        {
+          accessorKey: 'title',
+          header: 'Journal Title & Details',
+          cell: info => {
+            const row = info.row.original;
+            return html`
+              <div class="py-1">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <a href="${row.url}" target="_blank" rel="noopener noreferrer" class="font-bold text-indigo-700 hover:text-indigo-900 hover:underline flex items-center gap-1.5 text-base">
+                    ${row.title}
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs text-slate-400"></i>
+                  </a>
+                  ${row.iim ? html`<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1"><i class="fa-solid fa-building-columns text-[10px]"></i> IIM Published (${row.institution})</span>` : ''}
+                </div>
+                <div class="text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span><i class="fa-solid fa-newspaper mr-1 text-slate-400"></i>${row.publisher}</span>
+                  <span><i class="fa-solid fa-barcode mr-1 text-slate-400"></i>ISSN: ${row.issn}</span>
+                  <span class="text-emerald-700 font-medium"><i class="fa-solid fa-calendar-check mr-1"></i>${row.status2026}</span>
+                </div>
+              </div>
+            `;
+          }
+        },
+        {
+          accessorKey: 'discipline',
+          header: 'Discipline',
+          cell: info => {
+            const discipline = info.getValue();
+            let color = 'bg-slate-100 text-slate-700 border-slate-200';
+            if (discipline.includes('Finance')) color = 'bg-blue-50 text-blue-700 border-blue-200';
+            else if (discipline.includes('Accounting')) color = 'bg-teal-50 text-teal-700 border-teal-200';
+            else if (discipline.includes('Marketing')) color = 'bg-rose-50 text-rose-700 border-rose-200';
+            else if (discipline.includes('Operations')) color = 'bg-purple-50 text-purple-700 border-purple-200';
+            else if (discipline.includes('Information')) color = 'bg-cyan-50 text-cyan-700 border-cyan-200';
+            else if (discipline.includes('Economics')) color = 'bg-amber-50 text-amber-800 border-amber-200';
+
+            return html`
+              <span class="inline-block px-2.5 py-1 rounded-md text-xs font-medium border ${color}">
+                ${discipline}
+              </span>
+            `;
+          }
+        },
+        {
+          accessorKey: 'abdc',
+          header: 'ABDC Rank',
+          cell: info => {
+            const rank = info.getValue();
+            let badge = 'bg-slate-100 text-slate-600 border-slate-200';
+            if (rank === 'A*') badge = 'bg-purple-100 text-purple-900 border-purple-300 font-bold';
+            else if (rank === 'A') badge = 'bg-indigo-100 text-indigo-900 border-indigo-300 font-semibold';
+            else if (rank === 'B') badge = 'bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold';
+            else if (rank === 'C') badge = 'bg-amber-100 text-amber-900 border-amber-300';
+            return html`
+              <div class="text-center">
+                <span class="inline-flex items-center justify-center min-w-[36px] px-2 py-0.5 rounded text-xs border ${badge}">
+                  ${rank}
+                </span>
+              </div>
+            `;
+          }
+        },
+        {
+          accessorKey: 'scopus',
+          header: 'Scopus',
+          cell: info => {
+            const scopus = info.getValue();
+            let style = 'bg-slate-100 text-slate-600';
+            if (scopus === 'Q1') style = 'bg-sky-100 text-sky-800 border-sky-300 font-bold';
+            else if (scopus === 'Q2') style = 'bg-blue-100 text-blue-800 border-blue-300';
+            else if (scopus === 'Q3') style = 'bg-amber-100 text-amber-800 border-amber-300';
+            return html`
+              <div class="text-center">
+                <span class="inline-block px-2 py-0.5 rounded text-xs border ${style}">
+                  ${scopus}
+                </span>
+              </div>
+            `;
+          }
+        },
+        {
+          id: 'elite',
+          header: 'Elite Lists',
+          cell: info => {
+            const row = info.row.original;
+            return html`
+              <div class="flex items-center gap-1.5 flex-wrap">
+                ${row.ft50 ? html`<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500 text-white shadow-xs" title="Financial Times Top 50 Journal">FT 50</span>` : ''}
+                ${row.utd24 ? html`<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-600 text-white shadow-xs" title="UT Dallas Top 24 Journal">UTD 24</span>` : ''}
+                ${!row.ft50 && !row.utd24 ? html`<span class="text-xs text-slate-400">—</span>` : ''}
+              </div>
+            `;
+          }
+        },
+        {
+          id: 'indexing',
+          header: 'WoS & UGC',
+          cell: info => {
+            const row = info.row.original;
+            return html`
+              <div class="text-xs space-y-0.5">
+                <div class="text-slate-600"><span class="font-medium text-slate-500">WoS:</span> ${row.wos}</div>
+                <div class="text-slate-600"><span class="font-medium text-slate-500">UGC:</span> ${row.ugcCare}</div>
+              </div>
+            `;
+          }
+        },
+        {
+          id: 'action',
+          header: 'Link',
+          cell: info => {
+            const row = info.row.original;
+            return html`
+              <a href="${row.url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white transition shadow-xs border border-indigo-200">
+                <span>Visit</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+              </a>
+            `;
+          }
+        }
+      ], []);
+
+      // Custom global filter function matching title, discipline, publisher, institution, abdc, etc.
+      const customGlobalFilter = (row, columnId, filterValue) => {
+        if (!filterValue) return true;
+        const q = filterValue.toLowerCase().trim();
+        const o = row.original;
+        return (
+          o.title.toLowerCase().includes(q) ||
+          o.discipline.toLowerCase().includes(q) ||
+          o.publisher.toLowerCase().includes(q) ||
+          (o.institution && o.institution.toLowerCase().includes(q)) ||
+          o.abdc.toLowerCase().includes(q) ||
+          (q === 'ft50' && o.ft50) ||
+          (q === 'utd' && o.utd24) ||
+          (q === 'utd24' && o.utd24) ||
+          (q === 'iim' && o.iim) ||
+          (o.issn && o.issn.toLowerCase().includes(q))
+        );
+      };
+
+      // TanStack Table Instance
+      const table = useReactTable({
+        data: filteredData,
+        columns,
+        state: {
+          globalFilter,
+          sorting,
+          pagination
+        },
+        onGlobalFilterChange: setGlobalFilter,
+        globalFilterFn: customGlobalFilter,
+        onSortingChange: setSorting,
+        onPaginationChange: setPagination,
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+      });
+
+      // Export filtered results to CSV
+      const handleExportCSV = () => {
+        const rows = table.getFilteredRowModel().rows.map(r => r.original);
+        const headers = ["Title", "Discipline", "ABDC Rank", "FT50", "UTD24", "Scopus", "WoS", "UGC Care", "Publisher", "ISSN", "2026 Status", "URL"];
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(r => [
+            `"${r.title.replace(/"/g, '""')}"`,
+            `"${r.discipline}"`,
+            `"${r.abdc}"`,
+            r.ft50 ? 'Yes' : 'No',
+            r.utd24 ? 'Yes' : 'No',
+            `"${r.scopus}"`,
+            `"${r.wos}"`,
+            `"${r.ugcCare}"`,
+            `"${r.publisher}"`,
+            `"${r.issn}"`,
+            `"${r.status2026}"`,
+            `"${r.url}"`
+          ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `IIM_Journals_Filtered_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      // Quick filter presets
+      const disciplines = ['ALL', 'Accounting', 'Finance', 'General Management & Strategy', 'Marketing', 'Operations & Analytics', 'Information Systems', 'Economics'];
+
+      return html`
+        <div class="min-h-screen flex flex-col bg-slate-50">
+          
+          <!-- Top Navigation Header -->
+          <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                
+                <div class="flex items-center gap-3">
+                  <div class="h-11 w-11 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/30">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                  </div>
+                  <div>
+                    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2">
+                      IIM Journal Research Portal
+                      <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">2026 Edition</span>
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-300">
+                      Powered by <span class="font-semibold text-indigo-400">TanStack Table</span> • ABDC, Scopus, FT50, UTD 24 & IIM Publications
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Action Links -->
+                <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <button onClick=${handleExportCSV} class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition">
+                    <i class="fa-solid fa-file-csv text-sm"></i>
+                    <span>Export Filtered CSV</span>
+                  </button>
+                  <a href="https://abdc.edu.au/research/abdc-journal-list/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition border border-white/10">
+                    <span>ABDC Portal</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                  </a>
+                  <a href="https://www.scopus.com/sources.uri" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition border border-white/10">
+                    <span>Scopus Sources</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                  </a>
+                </div>
+
+              </div>
+            </div>
+          </header>
+
+          <!-- Main Content Area -->
+          <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+
+            <!-- Stat Counters Banner -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+              <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+                  <i class="fa-solid fa-book-bookmark"></i>
+                </div>
+                <div>
+                  <div class="text-xs text-slate-500 font-medium">Total Indexed</div>
+                  <div class="text-xl font-extrabold text-slate-800">${journalsData.length}</div>
+                </div>
+              </div>
+
+              <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                  <i class="fa-solid fa-star"></i>
+                </div>
+                <div>
+                  <div class="text-xs text-slate-500 font-medium">FT50 Journals</div>
+                  <div class="text-xl font-extrabold text-slate-800">50</div>
+                </div>
+              </div>
+
+              <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
+                  <i class="fa-solid fa-award"></i>
+                </div>
+                <div>
+                  <div class="text-xs text-slate-500 font-medium">UTD 24 Outlets</div>
+                  <div class="text-xl font-extrabold text-slate-800">24</div>
+                </div>
+              </div>
+
+              <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                  <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <div>
+                  <div class="text-xs text-slate-500 font-medium">IIM Flagship</div>
+                  <div class="text-xl font-extrabold text-slate-800">9</div>
+                </div>
+              </div>
+
+              <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3 col-span-2 sm:col-span-4 lg:col-span-1">
+                <div class="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-lg">
+                  <i class="fa-solid fa-filter"></i>
+                </div>
+                <div>
+                  <div class="text-xs text-slate-500 font-medium">Showing Results</div>
+                  <div class="text-xl font-extrabold text-indigo-600">${table.getFilteredRowModel().rows.length}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Search & Filter Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              
+              <!-- Instant Global Search Bar -->
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                </div>
+                <input
+                  type="text"
+                  value=${globalFilter ?? ''}
+                  onChange=${e => setGlobalFilter(e.target.value)}
+                  placeholder="Type to search journals (e.g. 'finance', 'accounting', 'marketing', 'vikalpa', 'amj', 'iim')..."
+                  class="w-full pl-12 pr-12 py-3.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-base font-medium"
+                />
+                ${globalFilter ? html`
+                  <button onClick=${() => setGlobalFilter('')} class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-circle-xmark text-lg"></i>
+                  </button>
+                ` : ''}
+              </div>
+
+              <!-- Quick Tag Filter Buttons -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <span>Fast Category Filters</span>
+                  ${(disciplineFilter !== 'ALL' || tagFilter !== 'ALL' || globalFilter) ? html`
+                    <button onClick=${() => { setDisciplineFilter('ALL'); setTagFilter('ALL'); setGlobalFilter(''); }} class="text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                      <i class="fa-solid fa-rotate-left"></i> Reset All Filters
+                    </button>
+                  ` : ''}
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-2">
+                  <button onClick=${() => setTagFilter('ALL')} class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${tagFilter === 'ALL' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
+                    All Categories
+                  </button>
+                  <button onClick=${() => setTagFilter('IIM')} class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${tagFilter === 'IIM' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'}">
+                    <i class="fa-solid fa-building-columns mr-1"></i> IIM Published
+                  </button>
+                  <button onClick=${() => setTagFilter('FT50')} class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${tagFilter === 'FT50' ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'}">
+                    <i class="fa-solid fa-star mr-1"></i> FT 50 Only
+                  </button>
+                  <button onClick=${() => setTagFilter('UTD24')} class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${tagFilter === 'UTD24' ? 'bg-indigo-700 text-white shadow-xs' : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200'}">
+                    <i class="fa-solid fa-award mr-1"></i> UTD 24 Only
+                  </button>
+                  <button onClick=${() => setTagFilter('ABDC_ASTAR')} class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${tagFilter === 'ABDC_ASTAR' ? 'bg-purple-600 text-white shadow-xs' : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'}">
+                    ABDC: A*
+                  </button>
+                  <button onClick=${() => setTagFilter('ABDC_A')} class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${tagFilter === 'ABDC_A' ? 'bg-blue-600 text-white shadow-xs' : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'}">
+                    ABDC: A
+                  </button>
+                  <button onClick=${() => setTagFilter('SCOPUS_Q1')} class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${tagFilter === 'SCOPUS_Q1' ? 'bg-sky-600 text-white shadow-xs' : 'bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200'}">
+                    Scopus Q1
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Discipline Chips -->
+              <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
+                <span class="text-xs font-medium text-slate-400 mr-1"><i class="fa-solid fa-tag mr-1"></i>Discipline:</span>
+                ${disciplines.map(d => html`
+                  <button
+                    key=${d}
+                    onClick=${() => setDisciplineFilter(d)}
+                    class="px-2.5 py-1 rounded-md text-xs font-medium transition ${disciplineFilter === d ? 'bg-slate-800 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
+                  >
+                    ${d}
+                  </button>
+                `)}
+              </div>
+
+            </div>
+
+            <!-- TanStack Table Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              
+              <!-- Responsive Table Container -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                  <thead class="bg-slate-50 text-slate-600 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
+                    ${table.getHeaderGroups().map(headerGroup => html`
+                      <tr key=${headerGroup.id}>
+                        ${headerGroup.headers.map(header => html`
+                          <th key=${header.id} class="px-4 py-3.5 whitespace-nowrap">
+                            ${header.isPlaceholder ? null : html`
+                              <div
+                                class="${header.column.getCanSort() ? 'cursor-pointer select-none flex items-center gap-1.5 hover:text-indigo-600' : ''}"
+                                onClick=${header.column.getToggleSortingHandler()}
+                              >
+                                <span>${flexRender(header.column.columnDef.header, header.getContext())}</span>
+                                ${header.column.getIsSorted() ? (
+                                  header.column.getIsSorted() === 'asc' ? html`<i class="fa-solid fa-arrow-up text-indigo-600 text-xs"></i>` : html`<i class="fa-solid fa-arrow-down text-indigo-600 text-xs"></i>`
+                                ) : (
+                                  header.column.getCanSort() ? html`<i class="fa-solid fa-sort text-slate-300 text-xs"></i>` : null
+                                )}
+                              </div>
+                            `}
+                          </th>
+                        `)}
+                      </tr>
+                    `)}
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${table.getRowModel().rows.length > 0 ? (
+                      table.getRowModel().rows.map(row => html`
+                        <tr key=${row.id} class="hover:bg-indigo-50/40 transition">
+                          ${row.getVisibleCells().map(cell => html`
+                            <td key=${cell.id} class="px-4 py-3">
+                              ${flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          `)}
+                        </tr>
+                      `)
+                    ) : (
+                      html`
+                        <tr>
+                          <td colspan="7" class="px-4 py-12 text-center text-slate-500">
+                            <i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-300"></i>
+                            <p class="font-medium">No matching journals found.</p>
+                            <p class="text-xs text-slate-400 mt-1">Try clearing your search query or selecting "All Categories".</p>
+                            <button onClick=${() => { setGlobalFilter(''); setDisciplineFilter('ALL'); setTagFilter('ALL'); }} class="mt-3 px-3 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-100">
+                              Reset Filters
+                            </button>
+                          </td>
+                        </tr>
+                      `
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Table Pagination Controls -->
+              <div class="px-4 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-600">
+                
+                <div class="flex items-center gap-2">
+                  <span>Show</span>
+                  <select
+                    value=${table.getState().pagination.pageSize}
+                    onChange=${e => table.setPageSize(Number(e.target.value))}
+                    class="bg-white border border-slate-300 rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                  >
+                    ${[10, 15, 25, 50, 100].map(pageSize => html`
+                      <option key=${pageSize} value=${pageSize}>${pageSize} rows</option>
+                    `)}
+                  </select>
+                  <span>of <strong class="text-slate-800">${table.getFilteredRowModel().rows.length}</strong> matching journals</span>
+                </div>
+
+                <div class="flex items-center gap-1">
+                  <button
+                    onClick=${() => table.setPageIndex(0)}
+                    disabled=${!table.getCanPreviousPage()}
+                    class="px-2.5 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="First Page"
+                  >
+                    <i class="fa-solid fa-angles-left"></i>
+                  </button>
+                  <button
+                    onClick=${() => table.previousPage()}
+                    disabled=${!table.getCanPreviousPage()}
+                    class="px-2.5 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Previous Page"
+                  >
+                    <i class="fa-solid fa-angle-left"></i>
+                  </button>
+                  
+                  <span class="px-3 py-1 font-medium">
+                    Page <strong class="text-slate-900">${table.getState().pagination.pageIndex + 1}</strong> of <strong class="text-slate-900">${table.getPageCount() || 1}</strong>
+                  </span>
+
+                  <button
+                    onClick=${() => table.nextPage()}
+                    disabled=${!table.getCanNextPage()}
+                    class="px-2.5 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Next Page"
+                  >
+                    <i class="fa-solid fa-angle-right"></i>
+                  </button>
+                  <button
+                    onClick=${() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled=${!table.getCanNextPage()}
+                    class="px-2.5 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Last Page"
+                  >
+                    <i class="fa-solid fa-angles-right"></i>
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Reference Guide / Information Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+              
+              <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
+                <div class="flex items-center gap-2 text-indigo-600 font-bold text-sm">
+                  <i class="fa-solid fa-scale-balanced"></i>
+                  <h3>ABDC Quality Framework</h3>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  Australian Business Deans Council ranks journals as <strong>A* (Top 5-7%)</strong>, <strong>A</strong>, <strong>B</strong>, and <strong>C</strong>. IIMs heavily weight A* and A publications for faculty appointments, tenures, and thesis graduation.
+                </p>
+              </div>
+
+              <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
+                <div class="flex items-center gap-2 text-amber-600 font-bold text-sm">
+                  <i class="fa-solid fa-trophy"></i>
+                  <h3>FT 50 & UTD 24 Elite Standard</h3>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  Financial Times 50 and UT Dallas 24 represent the highest research prestige. Publications in these journals boost institutional international ranks and earn premier research incentives across IIMs.
+                </p>
+              </div>
+
+              <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
+                <div class="flex items-center gap-2 text-emerald-600 font-bold text-sm">
+                  <i class="fa-solid fa-database"></i>
+                  <h3>Scopus & UGC-CARE Group II</h3>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  Scopus divides journals into Quartiles (Q1 to Q4). Under Indian UGC guidelines, any journal indexed in Scopus or Web of Science is automatically approved under <strong>UGC-CARE Group II</strong>.
+                </p>
+              </div>
+
+            </div>
+
+          </main>
+
+          <!-- Footer -->
+          <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                © 2026 IIM Research Directory • Curated for Academic Scholars & Faculty
+              </div>
+              <div class="flex items-center gap-4">
+                <a href="https://abdc.edu.au" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">ABDC</a>
+                <a href="https://www.scopus.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">Scopus</a>
+                <a href="https://www.scimagojr.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">SCImago</a>
+                <a href="https://ugccare.unipune.ac.in" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">UGC-CARE</a>
+              </div>
+            </div>
+          </footer>
+
+        </div>
+      `;
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+  </script>
+
+</body>
+</html>
